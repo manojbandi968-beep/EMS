@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import apiClient from '../api/client';
@@ -13,15 +14,20 @@ import {
   Trash2,
   Image as ImageIcon,
   ExternalLink,
+  CheckCircle2,
 } from 'lucide-react';
 import type { UserProfile } from '../types/auth';
 import { AdminEventModal } from '../components/admin/AdminEventModal';
 
 export const AdminPage: React.FC = () => {
   const { profile } = useAuth();
+  const location = useLocation();
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState<'events' | 'users' | 'registrations'>('events');
+
+  // Success notification
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,12 +85,31 @@ export const AdminPage: React.FC = () => {
     fetchData();
   }, []);
 
+  // Listen for ?create=true query or location state to open create modal
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if ((location.state as any)?.openCreateModal || params.get('create') === 'true') {
+      setActiveTab('events');
+      handleOpenCreateModal();
+    }
+  }, [location.search, location.state]);
+
+  const handleEventSaved = (msg?: string) => {
+    fetchData();
+    setSuccessMessage(msg || (eventToEdit ? 'Event updated successfully!' : 'Event created successfully!'));
+    setTimeout(() => {
+      setSuccessMessage(null);
+    }, 5000);
+  };
+
   const handleDeleteEvent = async (id: string, title: string) => {
     if (!window.confirm(`Are you sure you want to delete event "${title}"?`)) return;
 
     try {
       await apiClient.delete(`/events/${id}`);
       fetchData();
+      setSuccessMessage(`Event "${title}" was deleted.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete event');
     }
@@ -139,6 +164,25 @@ export const AdminPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div
+          id="admin-success-banner"
+          className="mb-8 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between gap-3 animate-in fade-in"
+        >
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-400 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-emerald-950/40 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Metrics Banner */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
@@ -453,7 +497,7 @@ export const AdminPage: React.FC = () => {
       <AdminEventModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onEventSaved={fetchData}
+        onEventSaved={handleEventSaved}
         eventToEdit={eventToEdit}
       />
     </div>

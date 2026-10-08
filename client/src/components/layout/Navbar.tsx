@@ -1,16 +1,39 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { CalendarDays, PlusCircle, Search, Menu, X, Sparkles, User, LogIn, LogOut, Shield } from 'lucide-react';
+import { CalendarDays, PlusCircle, Search, Menu, X, Sparkles, User, LogIn, LogOut, Shield, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [accessDeniedNotice, setAccessDeniedNotice] = useState<string | null>(null);
   const { user, profile, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const handleCreateEventClick = () => {
+    if (!user) {
+      navigate('/login?message=' + encodeURIComponent('Please sign in with an admin account to create an event.'), {
+        state: {
+          message: 'Please sign in with an admin account to create an event.',
+          from: { pathname: '/admin', search: '?create=true' },
+        },
+      });
+      return;
+    }
+
+    if (!isAdmin && profile?.role !== 'admin') {
+      setAccessDeniedNotice(
+        'Access Denied: Only administrators can create events. Your current account does not have permission to create events.'
+      );
+      return;
+    }
+
+    // Logged in as administrator
+    navigate('/admin?create=true', { state: { openCreateModal: true } });
   };
 
   return (
@@ -149,7 +172,7 @@ export const Navbar: React.FC = () => {
 
             <button
               id="btn-create-event-nav"
-              onClick={() => alert('Event creation will be connected once backend & events steps are added!')}
+              onClick={handleCreateEventClick}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-xs text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-600/25 transition-all transform hover:-translate-y-0.5 ml-1"
             >
               <PlusCircle className="w-3.5 h-3.5" />
@@ -251,15 +274,45 @@ export const Navbar: React.FC = () => {
           )}
 
           <button
+            id="btn-create-event-mobile"
             onClick={() => {
               setIsMobileMenuOpen(false);
-              alert('Event creation will be available in the upcoming step!');
+              handleCreateEventClick();
             }}
             className="w-full flex items-center justify-center gap-2 mt-4 px-5 py-3.5 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 shadow-md"
           >
             <Sparkles className="w-4 h-4" />
             <span>Create New Event</span>
           </button>
+        </div>
+      )}
+
+      {/* Access Denied Modal Notice */}
+      {accessDeniedNotice && (
+        <div 
+          id="access-denied-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setAccessDeniedNotice(null)}
+        >
+          <div 
+            className="bg-slate-900 border border-red-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-400">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <h3 className="font-outfit text-xl font-bold text-white mb-2">Access Denied</h3>
+            <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
+              {accessDeniedNotice}
+            </p>
+            <button
+              onClick={() => setAccessDeniedNotice(null)}
+              id="btn-close-access-denied"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
     </header>

@@ -13,8 +13,21 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Return to intended page if redirected by ProtectedRoute
-  const fromLocation = (location.state as any)?.from?.pathname || '/';
+  // Return to intended page if redirected by ProtectedRoute or admin create flow
+  const searchParams = new URLSearchParams(location.search);
+  const infoMessage = (location.state as any)?.message || searchParams.get('message');
+  
+  let fromLocation = '/';
+  const fromState = (location.state as any)?.from;
+  if (typeof fromState === 'string') {
+    fromLocation = fromState;
+  } else if (fromState?.pathname) {
+    fromLocation = fromState.pathname + (fromState.search || '');
+  } else if (searchParams.get('redirect')) {
+    fromLocation = searchParams.get('redirect')!;
+  } else if (infoMessage?.includes('admin')) {
+    fromLocation = '/admin?create=true';
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +88,19 @@ export const LoginPage: React.FC = () => {
                 <strong className="font-semibold block mb-0.5">Setup Required:</strong>
                 Add your <code className="bg-slate-950 px-1 py-0.5 rounded text-amber-200">VITE_SUPABASE_ANON_KEY</code> in{' '}
                 <code className="bg-slate-950 px-1 py-0.5 rounded text-amber-200">client/.env</code> to connect with Supabase.
+              </div>
+            </div>
+          )}
+
+          {infoMessage && (
+            <div
+              id="login-notice-banner"
+              className="mb-6 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs flex items-start gap-3 animate-in fade-in"
+            >
+              <Sparkles className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold block mb-0.5 text-indigo-200">Notice:</strong>
+                <p>{infoMessage}</p>
               </div>
             </div>
           )}
