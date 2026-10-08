@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test:e2e": "node test_e2e_full.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
